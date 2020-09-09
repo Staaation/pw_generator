@@ -2,11 +2,11 @@
 # pw_gen.py
 
 
-import sys, random, os
+import sys, random, os, mmap, pathlib
 os.chdir('.\\quizDirectory')
 if len(sys.argv) < 4:
 	print('\nA password will be generated for you, please follow these instructions \n' +
-	'Usage: py pw_gen.py account=\'name\' len=\'10\' specChar=\'y/n\'')
+	'Usage: py pw_gen.py account=\'name\' len=10 specChar=\'y/n\'')
 	sys.exit()
 accountStr = sys.argv[1]
 lenStr = sys.argv[2]
@@ -41,7 +41,21 @@ def randomizePW(length, specChar):
 				pw += chr(random.randrange(97, 122))
 	return pw
 
-pwFile = open('passwords.txt','a')
-pwFile.write('Account: %s  pw: %s\n' % (account, randomizePW(length, specChar)))
-pwFile.close()
-
+bAcnt = bytes(account, 'utf-8')
+overwritten = False
+with open('passwords.txt', 'r+b', 0) as infile:
+        mf = mmap.mmap(infile.fileno(), 0, access=mmap.ACCESS_READ)
+        with open('temp.txt', 'w') as outfile:
+                for line in iter(mf.readline, b""):
+                        if line.find(bAcnt) != -1:
+                                outfile.write('Account: %s  pw: %s\n' % (account, randomizePW(length, specChar)))
+                                overwritten = True
+                        else:
+                                line = line.rstrip()
+                                strLine = str(line, 'utf-8')
+                                outfile.write(strLine)
+                                outfile.write('\n')
+                if overwritten == False:
+                        outfile.write('Account: %s  pw: %s\n' % (account, randomizePW(length, specChar)))
+        mf.close()
+pathlib.Path('temp.txt').replace('passwords.txt')
